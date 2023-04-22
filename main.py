@@ -171,25 +171,7 @@ def input_data(input_prompt, method = 1):
     else:
         pass
     return i - 1
-
-# def get_mission_five_list():
-#     sets = ['A', 'B', 'C', 'D']
-#     results = []
-#     for s in sets:
-#         i = 1
-#         while True:
-#             oled.fill(0)
-#             if key_pad_add.value():
-#                 time.sleep_ms(80)
-#                 if key_pad_add.value():
-#                     i = (i % 5) + 1
-#                     oled.text_center(f'set {s} = {i}', 0)
-#                     oled.show()
-#             if key_pad_ok.value():
-#                 results.append([i, 5000 if s != 'D' else 15000])
-#                 break
-#     return results
-
+  
 # class of a mission
 # a mission is an independent program, run given step list step by step
 class Mission:
