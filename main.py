@@ -160,6 +160,24 @@ def input_data(input_prompt, method = 1):
         pass
     return i - 1
 
+# def get_mission_five_list():
+#     sets = ['A', 'B', 'C', 'D']
+#     results = []
+#     for s in sets:
+#         i = 1
+#         while True:
+#             oled.fill(0)
+#             if key_pad_add.value():
+#                 time.sleep_ms(80)
+#                 if key_pad_add.value():
+#                     i = (i % 5) + 1
+#                     oled.text_center(f'set {s} = {i}', 0)
+#                     oled.show()
+#             if key_pad_ok.value():
+#                 results.append([i, 5000 if s != 'D' else 15000])
+#                 break
+#     return results
+  
 # class of a mission
 # a mission is an independent program, run given step list step by step
 class Mission:
@@ -170,6 +188,7 @@ class Mission:
         self.special_check_list = special_check_list
 
         #Pre-Modify-Check
+        # change flag
         self.check_special_index()
         self.steps = self.get_steps_from_step_instruction_list()
 
@@ -185,13 +204,25 @@ class Mission:
             self.isNeedAggressivePID = False
 
     def get_steps_from_step_instruction_list(self):
-        stepslist = []
+        results = []
+        sets = ['A', 'B', 'C', 'D']
         if self.isNeedInput:
-            for c in ["A","B","C","D"]:
-                stepslist.append(input_data("Please input " + c))
+            for s in sets:
+                i = 1
+                while True:
+                    oled.fill(0)
+                    if key_pad_add.value():
+                        time.sleep_ms(80)
+                        if key_pad_add.value():
+                            i = (i % 5) + 1
+                            oled.text_center(f'set {s} = {i}', 0)
+                            oled.show()
+                    if key_pad_ok.value():
+                        results.append([i, 5000 if s != 'D' else 15000])
+                        break
         else:
-            stepslist = self.step_instruction_list[self.question_index]
-        return stepslist
+            results = self.step_instruction_list[self.question_index]
+        return results
 
     #smallest cycle
     #[target:int, timeout_us:int]
@@ -274,6 +305,8 @@ target_position_list = get_target_pisition_list()
 
 while(True):
     mission_index = input_data("Which mission do you want to experience?")
+    if mission_index == 4 :
+        mission_five = get_mission_five_list()
     current_mission = Mission(mission_index, STEP_INSTRUCTION_LIST, SPECIAL_CHECK_LIST)
     current_mission.run()
     move_platform(0)
