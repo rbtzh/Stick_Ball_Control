@@ -68,6 +68,22 @@ methed = 0
 oled_i2c = I2C(scl=Pin(4),sda=Pin(5))
 
 
+# Steps instruction list, contains steps=
+STEP_INSTRUCTION_LIST = [
+    [[1,30]],
+    [[2,30]],
+    [[4,30]],
+    [[1,15],[2,30]],
+    [[2,15],[4,30]],
+    [],
+    [[3,15],[1,15],[3,15],[1,15],[3,15],[1,15],[3,15],[1,15],[4,30]],
+    [[2,90]]
+    ]
+
+SPECIAL_INDEX_NEED_INPUT = [5]
+SPECIAL_INDEX_NEED_AGGRESSIVE_PID = [7]
+SPECIAL_CHECK_LIST = [SPECIAL_INDEX_NEED_INPUT,SPECIAL_INDEX_NEED_AGGRESSIVE_PID]
+
 # void move_platform( float:degree )
 # move platform (the PVC Pipe) to given degree,
 # with limit declared in 舵机范围
@@ -94,31 +110,42 @@ def get_target_pisition_list():
     return [213,160,115,65,25]
 
 # void display_data(string)
-def display_data(display_content):
+# 0: print to terminal
+# 1: print to ssd1306
+def display_data(display_content, methodlist = []):
     #FIXTHIS display someting to SSD1306 OLED
     print(display_content)
 
 # int input_data(string)
-def input_data(input_prompt):
-    print(input_prompt)
-    i = input()
-    return i
-
-# Steps instruction list, contains steps=
-STEP_INSTRUCTION_LIST = [
-    [[1,30]],
-    [[2,30]],
-    [[4,30]],
-    [[1,15],[2,30]],
-    [[2,15],[4,30]],
-    [],
-    [[3,15],[1,15],[3,15],[1,15],[3,15],[1,15],[3,15],[1,15],[4,30]],
-    [[2,90]]
-    ]
-
-SPECIAL_INDEX_NEED_INPUT = [5]
-SPECIAL_INDEX_NEED_AGGRESSIVE_PID = [7]
-SPECIAL_CHECK_LIST = [SPECIAL_INDEX_NEED_INPUT,SPECIAL_INDEX_NEED_AGGRESSIVE_PID]
+# return [0...7], but input [1...8]
+# methidlist is a list, default to 0
+# 0: from terminal input function
+# 1: from enternal keyboard
+def input_data(input_prompt, method = 0):
+    if method == 0:
+        print(input_prompt)
+        i = input()
+    elif method == 1:
+        i = 1
+        while True:
+            #FIXTHIS
+            if pressed_key == ok_key:
+                break
+            elif pressed_key == up_arrow_key:
+                if i+1 > len(STEP_INSTRUCTION_LIST):
+                    i = 1
+                else:
+                    i += 1
+            elif pressed_key == down_arrow_key:
+                if i-1 < 1:
+                    i = len(STEP_INSTRUCTION_LIST)
+                else:
+                    i -= 1
+            else:
+                pass
+    else:
+        pass
+    return i - 1              
 
 # class of a mission
 # a mission is an independent program, run given step list step by step
