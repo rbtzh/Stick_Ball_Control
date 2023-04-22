@@ -60,15 +60,15 @@ ball_lab = (0, 100, -97, 127, 35 , 127) #yellow
 # Instantiate the Servo class
 servo_object = Servo(1)
 
-key_pad_add = Pin(0,Pin.IN)
-key_pad_sub = Pin(1,Pin.IN)
-key_pad_ok  = Pin(2,Pin.IN)
+key_pad_add = Pin('P0',Pin.IN,Pin.PULL_DOWN)
+key_pad_sub = Pin('P1',Pin.IN)
+key_pad_ok  = Pin('P2',Pin.IN)
 press = 0
 
 method = 0
 
-oled_i2c = I2C(scl=Pin(4),sda=Pin(5))
-oled = SSD1306_I2C_MODIFIED(128,64,oled_i2c)
+oled_i2c = I2C(scl=Pin('P4'),sda=Pin('P5'))
+oled = ssd1306_tools.SSD1306_I2C_MODIFIED(128,64,oled_i2c)
 
 
 # Steps instruction list, contains steps=
@@ -115,7 +115,7 @@ def get_target_pisition_list():
 # void display_data(string)
 # 0: print to terminal
 # 1: print to ssd1306
-def display_data(display_content, method, mission_index):
+def display_data(display_content, method = 1, mission_index):
     #FIXTHIS display someting to SSD1306 OLED
     if method == 0:
         print(display_content)
@@ -129,7 +129,7 @@ def display_data(display_content, method, mission_index):
 # methidlist is a list, default to 0
 # 0: from terminal input function
 # 1: from enternal keyboard
-def input_data(input_prompt, method = 0):
+def input_data(input_prompt, method = 1):
     if method == 0:
         print(input_prompt)
         i = input()
