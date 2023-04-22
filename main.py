@@ -27,7 +27,7 @@
 
 # 1 Init Program
 # 1.1 Import Packages
-import sensor, image, time, math
+import sensor, image, time, math, machine
 from time import sleep as 等待
 from pyb import millis as 系统运行时间
 from pyb import Servo
@@ -59,6 +59,12 @@ ball_lab = (0, 100, -97, 127, 35 , 127) #yellow
 # Objects related to hardware control, GPIO, Display, etc
 # Instantiate the Servo class
 servo_object = Servo(1)
+key_pad_add = Pin(0,Pin.IN)
+key_pad_min = Pin(1,Pin.IN)
+key_pad_ok  = Pin(2,Pin.IN)
+key_pad_quit= Pin(3,Pin.IN)
+
+
 
 # Steps instruction list, contains steps=
 STEP_INSTRUCTION_LIST = [
@@ -91,6 +97,7 @@ def move_platform(x):
     servo_object.angle(舵机中点-x)    #x轴，向右减小
     print("platform moved")
     print("x: " + str(x))
+
 
 # list get_target_pisition_list(void)
 # use openmv and AprilTag to get the position of target areas in framebuffer
