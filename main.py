@@ -27,7 +27,7 @@
 
 # 1 Init Program
 # 1.1 Import Packages
-import sensor, image, time, math, machine
+import sensor, image, time, math, machine, ssd1306_tools
 from time import sleep as 等待
 from pyb import millis as 系统运行时间
 from pyb import Servo
@@ -64,9 +64,11 @@ key_pad_add = Pin(0,Pin.IN)
 key_pad_sub = Pin(1,Pin.IN)
 key_pad_ok  = Pin(2,Pin.IN)
 press = 0
-methed = 0
+
+method = 0
 
 oled_i2c = I2C(scl=Pin(4),sda=Pin(5))
+oled = SSD1306_I2C_MODIFIED(128,64,oled_i2c)
 
 
 # Steps instruction list, contains steps=
@@ -113,9 +115,14 @@ def get_target_pisition_list():
 # void display_data(string)
 # 0: print to terminal
 # 1: print to ssd1306
-def display_data(display_content, methodlist = []):
+def display_data(display_content, method, mission_index):
     #FIXTHIS display someting to SSD1306 OLED
-    print(display_content)
+    if method == 0:
+        print(display_content)
+    if method == 1:
+        oled.fill(0)
+        oled.text_center(f"The mission now is:{mission_index}",0)
+        oled.show()
 
 # int input_data(string)
 # return [0...7], but input [1...8]
@@ -128,6 +135,7 @@ def input_data(input_prompt, method = 0):
         i = input()
     elif method == 1:
         i = 1
+        display_data("None",method,i)
         while True:
             #FIXTHIS
             if key_pad_ok.value == press:
@@ -137,12 +145,14 @@ def input_data(input_prompt, method = 0):
             elif key_pad_add.value == press:
                 time.sleep_ms(10)
                 if key_pad_add.value == press:
+                    display_data("None", method, i)
                     if i+1 > len(STEP_INSTRUCTION_LIST):
                         i = 1
                     else:
                         i += 1
             elif key_pad_sub.value == press:
                 if key_pad_sub.value == press:
+                    display_data("None", method, i)
                     if i-1 < 1:
                         i = len(STEP_INSTRUCTION_LIST)
                     else:
