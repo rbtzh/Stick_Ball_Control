@@ -31,6 +31,7 @@ import sensor, image, time, math, machine, ssd1306_tools
 from time import sleep as 等待
 from pyb import millis as 系统运行时间
 from pyb import Servo
+from machine import Pin, SoftI2C
 
 # 1.2 Init OpenMV Sensor
 sensor.reset()
@@ -60,27 +61,27 @@ ball_lab = (0, 100, -97, 127, 35 , 127) #yellow
 # Instantiate the Servo class
 servo_object = Servo(1)
 
-key_pad_add = Pin(0,Pin.IN)
-key_pad_sub = Pin(1,Pin.IN)
-key_pad_ok  = Pin(2,Pin.IN)
-press = 0
+key_pad_add = Pin('P0',Pin.IN,Pin.PULL_DOWN)
+key_pad_sub = Pin('P1',Pin.IN,Pin.PULL_DOWN)
+key_pad_ok  = Pin('P2',Pin.IN,Pin.PULL_DOWN)
+press = 1
 
 method = 0
 
-oled_i2c = I2C(scl=Pin(4),sda=Pin(5))
-oled = SSD1306_I2C_MODIFIED(128,64,oled_i2c)
+oled_i2c = SoftI2C(scl=Pin('P4'),sda=Pin('P5'))
+oled = ssd1306_tools.SSD1306_I2C_MODIFIED(128,64,oled_i2c)
 
 
 # Steps instruction list, contains steps=
 STEP_INSTRUCTION_LIST = [
-    [[1,30]],
-    [[2,30]],
-    [[4,30]],
-    [[1,15],[2,30]],
-    [[2,15],[4,30]],
+    [[1,30000]],
+    [[2,30000]],
+    [[4,30000]],
+    [[1,5000],[2,30000]],
+    [[2,5000],[4,30000]],
     [],
-    [[3,15],[1,15],[3,15],[1,15],[3,15],[1,15],[3,15],[1,15],[4,30]],
-    [[2,90]]
+    [[3,5000],[1,5000],[3,5000],[1,5000],[3,5000],[1,5000],[3,5000],[1,5000],[4,15000]],
+    [[2,90000]]
     ]
 
 SPECIAL_INDEX_NEED_INPUT = [5]
@@ -115,13 +116,13 @@ def get_target_pisition_list():
 # void display_data(string)
 # 0: print to terminal
 # 1: print to ssd1306
-def display_data(display_content, method, mission_index):
+def display_data(display_content, method = 1, mission_index = 0):
     #FIXTHIS display someting to SSD1306 OLED
     if method == 0:
         print(display_content)
     if method == 1:
         oled.fill(0)
-        oled.text_center(f"The mission now is:{mission_index}",0)
+        oled.text_center(f"now is:{mission_index}",0)
         oled.show()
 
 # int input_data(string)
@@ -129,7 +130,7 @@ def display_data(display_content, method, mission_index):
 # methidlist is a list, default to 0
 # 0: from terminal input function
 # 1: from enternal keyboard
-def input_data(input_prompt, method = 0):
+def input_data(input_prompt, method = 1):
     if method == 0:
         print(input_prompt)
         i = input()
@@ -138,20 +139,21 @@ def input_data(input_prompt, method = 0):
         display_data("None",method,i)
         while True:
             #FIXTHIS
-            if key_pad_ok.value == press:
-                time.sleep_ms(10)
-                if key_pad_ok.value == press:
+            if key_pad_ok.value() == press:
+                time.sleep_ms(80)
+                if key_pad_ok.value() == press:
                     break
-            elif key_pad_add.value == press:
-                time.sleep_ms(10)
-                if key_pad_add.value == press:
+            elif key_pad_add.value() == press:
+                time.sleep_ms(80)
+                if key_pad_add.value() == press:
                     display_data("None", method, i)
                     if i+1 > len(STEP_INSTRUCTION_LIST):
                         i = 1
                     else:
                         i += 1
-            elif key_pad_sub.value == press:
-                if key_pad_sub.value == press:
+            elif key_pad_sub.value() == press:
+                time.sleep_ms(80)
+                if key_pad_sub.value() == press:
                     display_data("None", method, i)
                     if i-1 < 1:
                         i = len(STEP_INSTRUCTION_LIST)
@@ -161,7 +163,7 @@ def input_data(input_prompt, method = 0):
                 pass
     else:
         pass
-    return i - 1              
+    return i - 1
 
 # class of a mission
 # a mission is an independent program, run given step list step by step
@@ -198,7 +200,7 @@ class Mission:
 
     #smallest cycle
     #[target:int, timeout_us:int]
-    def one_step(step_info):
+    def one_step(self,step_info):
         target_position = target_position_list[step_info[0]]
 
         ball_position=0
@@ -279,3 +281,4 @@ while(True):
     mission_index = input_data("Which mission do you want to experience?")
     current_mission = Mission(mission_index, STEP_INSTRUCTION_LIST, SPECIAL_CHECK_LIST)
     current_mission.run()
+    move_platform(0)
