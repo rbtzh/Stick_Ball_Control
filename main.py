@@ -63,6 +63,7 @@ servo_object = Servo(1)
 key_pad_add = Pin(0,Pin.IN)
 key_pad_sub = Pin(1,Pin.IN)
 key_pad_ok  = Pin(2,Pin.IN)
+press = 0
 methed = 0
 
 oled_i2c = I2C(scl=Pin(4),sda=Pin(5))
@@ -129,18 +130,23 @@ def input_data(input_prompt, method = 0):
         i = 1
         while True:
             #FIXTHIS
-            if pressed_key == ok_key:
-                break
-            elif pressed_key == up_arrow_key:
-                if i+1 > len(STEP_INSTRUCTION_LIST):
-                    i = 1
-                else:
-                    i += 1
-            elif pressed_key == down_arrow_key:
-                if i-1 < 1:
-                    i = len(STEP_INSTRUCTION_LIST)
-                else:
-                    i -= 1
+            if key_pad_ok.value == press:
+                time.sleep_ms(10)
+                if key_pad_ok.value == press:
+                    break
+            elif key_pad_add.value == press:
+                time.sleep_ms(10)
+                if key_pad_add.value == press:
+                    if i+1 > len(STEP_INSTRUCTION_LIST):
+                        i = 1
+                    else:
+                        i += 1
+            elif key_pad_sub.value == press:
+                if key_pad_sub.value == press:
+                    if i-1 < 1:
+                        i = len(STEP_INSTRUCTION_LIST)
+                    else:
+                        i -= 1
             else:
                 pass
     else:
