@@ -51,11 +51,19 @@ ball_lab = (0, 100, -97, 127, 35 , 127) #yellow
 # Consts relate to PID control
 画面中点=(320/2,240/2)
 舵机中点=-7
-舵机范围=(-30 ,30)
-比例P系数=0.4  #0.3
-积分I系数=0.25 #0.18
-微分D系数=0.235 #0.39
-积分I最大值=5  #5
+
+舵机范围_温和=(-30 ,30)
+比例P系数_温和=0.4
+积分I系数_温和=0.4
+微分D系数_温和=0.3
+积分I最大值_温和=5
+
+舵机范围_激进=(-57 ,57)
+比例P系数_激进=1  #0.4
+积分I系数_激进=0.4  #0.4
+微分D系数_激进=0.5  #0.3
+积分I最大值_激进=5   #5
+
 
 # Objects related to hardware control, GPIO, Display, etc
 # Instantiate the Servo class
@@ -91,13 +99,13 @@ SPECIAL_CHECK_LIST = [SPECIAL_INDEX_NEED_INPUT,SPECIAL_INDEX_NEED_AGGRESSIVE_PID
 # move platform (the PVC Pipe) to given degree,
 # with limit declared in 舵机范围
 # and middle degree (to leveling system at init status) declared in 舵机中点
-def move_platform(x):
-    global 舵机范围,舵机中点
+def move_platform(x, servo_range = 舵机范围_温和):
+    global 舵机中点
 
-    if x<舵机范围[0]:
-        x=舵机范围[0]
-    if x>舵机范围[1]:
-        x=舵机范围[1]
+    if x<servo_range[0]:
+        x=servo_range[0]
+    if x>servo_range[1]:
+        x=servo_range[1]
 
     servo_object.angle(舵机中点-x)    #x轴，向右减小
     print("platform moved")
@@ -110,7 +118,7 @@ def move_platform(x):
 # example: [213,160,115,65,25], so the position of area 1 is list[0]
 def get_target_pisition_list():
     #FISTHIS use openmv and AprilTag to get the position of target areas in framebuffer
-    return [213,160,115,65,25]
+    return [206,163,117,72,29]
 
 # void display_data(string)
 # 0: print to terminal
@@ -125,7 +133,11 @@ def display_data(display_content, method = 1, mission_index = 0):
             oled.text_center("now is running",0)
             oled.show()
         else:
-            oled.text_center(f"now is:{mission_index}",0)
+            oled.text_center(f"Please select ",0)
+            oled.text_center(f"your mission",10)
+            oled.text_center(f"now selecting",30)
+            oled.text_center(f":",40)
+            oled.text_center(f"MISSION {mission_index}",50)
             oled.show()
 
 # int input_data(string)
@@ -177,7 +189,7 @@ def input_data(input_prompt, method = 1):
 #                 results.append([i, 5000 if s != 'D' else 15000])
 #                 break
 #     return results
-  
+
 # class of a mission
 # a mission is an independent program, run given step list step by step
 class Mission:
@@ -207,19 +219,27 @@ class Mission:
         results = []
         sets = ['A', 'B', 'C', 'D']
         if self.isNeedInput:
+            print('need input') #
+            time.sleep(1) #
             for s in sets:
-                i = 1
-                while True:
+                print(s)#
+                time.sleep(1)#
+                i = 0
+                flag = 0
+                while flag == 0: #
                     oled.fill(0)
                     if key_pad_add.value():
                         time.sleep_ms(80)
                         if key_pad_add.value():
-                            i = (i % 5) + 1
+                            if i + 1 > 5:
+                                i = 1
+                            else:
+                                i = i + 1
                             oled.text_center(f'set {s} = {i}', 0)
                             oled.show()
                     if key_pad_ok.value():
-                        results.append([i, 5000 if s != 'D' else 15000])
-                        break
+                        results.append([i-1, 10000 if s != 'D' else 15000])
+                        flag = 1 #
         else:
             results = self.step_instruction_list[self.question_index]
         return results
@@ -228,7 +248,18 @@ class Mission:
     #[target:int, timeout_us:int]
     def one_step(self,step_info):
         target_position = target_position_list[step_info[0]]
-
+        if self.isNeedAggressivePID:
+            比例P系数 = 比例P系数_激进
+            积分I系数 = 积分I系数_激进
+            微分D系数 = 微分D系数_激进
+            积分I最大值 = 积分I最大值_激进
+            舵机范围 = 舵机范围_激进
+        else:
+            比例P系数 = 比例P系数_温和
+            积分I系数 = 积分I系数_温和
+            微分D系数 = 微分D系数_温和
+            积分I最大值 = 积分I最大值_温和
+            舵机范围 = 舵机范围_温和
         ball_position=0
         比例P=0
         积分I=0
@@ -280,7 +311,7 @@ class Mission:
 
                 执行量=比例P+积分I+微分D
             #4）控制平台-执行量输入执行器
-                move_platform(执行量)
+                move_platform(执行量, servo_range = 舵机范围)
                 #手动调平
                 #move_platform(10,-18)
                 img.draw_string(0,0,'ERR:'+str(偏差量),color=(255,0,0))
@@ -305,8 +336,6 @@ target_position_list = get_target_pisition_list()
 
 while(True):
     mission_index = input_data("Which mission do you want to experience?")
-    if mission_index == 4 :
-        mission_five = get_mission_five_list()
     current_mission = Mission(mission_index, STEP_INSTRUCTION_LIST, SPECIAL_CHECK_LIST)
     current_mission.run()
     move_platform(0)
