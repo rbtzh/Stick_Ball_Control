@@ -62,7 +62,6 @@ ball_lab = (0, 100, -97, 127, 35 , 127) #yellow
 servo_object = Servo(1)
 
 key_pad_add = Pin('P0',Pin.IN,Pin.PULL_DOWN)
-key_pad_sub = Pin('P1',Pin.IN,Pin.PULL_DOWN)
 key_pad_ok  = Pin('P2',Pin.IN,Pin.PULL_DOWN)
 press = 1
 
@@ -79,7 +78,7 @@ STEP_INSTRUCTION_LIST = [
     [[4,30000]],
     [[1,5000],[2,30000]],
     [[2,5000],[4,30000]],
-    [],
+    [[1,1]],
     [[3,5000],[1,5000],[3,5000],[1,5000],[3,5000],[1,5000],[3,5000],[1,5000],[4,15000]],
     [[2,90000]]
     ]
@@ -122,8 +121,12 @@ def display_data(display_content, method = 1, mission_index = 0):
         print(display_content)
     if method == 1:
         oled.fill(0)
-        oled.text_center(f"now is:{mission_index}",0)
-        oled.show()
+        if mission_index == 0:
+            oled.text_center("now is running",0)
+            oled.show()
+        else:
+            oled.text_center(f"now is:{mission_index}",0)
+            oled.show()
 
 # int input_data(string)
 # return [0...7], but input [1...8]
@@ -146,19 +149,11 @@ def input_data(input_prompt, method = 1):
             elif key_pad_add.value() == press:
                 time.sleep_ms(80)
                 if key_pad_add.value() == press:
-                    display_data("None", method, i)
                     if i+1 > len(STEP_INSTRUCTION_LIST):
                         i = 1
                     else:
                         i += 1
-            elif key_pad_sub.value() == press:
-                time.sleep_ms(80)
-                if key_pad_sub.value() == press:
                     display_data("None", method, i)
-                    if i-1 < 1:
-                        i = len(STEP_INSTRUCTION_LIST)
-                    else:
-                        i -= 1
             else:
                 pass
     else:
