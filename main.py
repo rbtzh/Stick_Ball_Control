@@ -59,11 +59,13 @@ ball_lab = (0, 100, -97, 127, 35 , 127) #yellow
 # Objects related to hardware control, GPIO, Display, etc
 # Instantiate the Servo class
 servo_object = Servo(1)
-key_pad_add = Pin(0,Pin.IN)
-key_pad_min = Pin(1,Pin.IN)
-key_pad_ok  = Pin(2,Pin.IN)
-key_pad_quit= Pin(3,Pin.IN)
 
+key_pad_add = Pin(0,Pin.IN)
+key_pad_sub = Pin(1,Pin.IN)
+key_pad_ok  = Pin(2,Pin.IN)
+methed = 0
+
+oled_i2c = I2C(scl=Pin(4),sda=Pin(5))
 
 
 # void move_platform( float:degree )
