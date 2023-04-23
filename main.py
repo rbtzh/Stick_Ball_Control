@@ -56,11 +56,18 @@ sidecar_ball_roi = (56,29,131,206-29)
 画面中点=(320/2,240/2)
 舵机中点=-7
 
-舵机范围_温和=(-30 ,30)
-比例P系数_温和=0.4
-积分I系数_温和=0.4
-微分D系数_温和=0.3
-积分I最大值_温和=5
+#舵机范围_温和=(-30 ,30)
+#比例P系数_温和=0.4
+#积分I系数_温和=0.4
+#微分D系数_温和=0.3
+#积分I最大值_温和=5
+
+舵机范围_温和=(-35 ,35)
+比例P系数_温和=0.4  #0.3
+积分I系数_温和=0.7 #0.18
+微分D系数_温和=0.4 #0.39
+积分I最大值_温和=5  #5
+
 
 舵机范围_激进=(-57 ,57)
 比例P系数_激进=1  #0.4
@@ -87,17 +94,17 @@ method = 0
 
 oled_i2c = SoftI2C(scl=Pin('P4'),sda=Pin('P5'))
 oled = ssd1306_tools.SSD1306_I2C_MODIFIED(128,64,oled_i2c)
-
+short_interval = 2000
 
 # Steps instruction list, contains steps=
 STEP_INSTRUCTION_LIST = [
     [[1,10000]],
-    [[2,20000]],
-    [[4,20000]],
-    [[1,10000],[2,20000]],
-    [[2,10000],[4,20000]],
+    [[2,60000]],
+    [[4,10000]],
+    [[1,4000],[2,10000]],
+    [[2,5000],[4,10000]],
     [[1,1]],
-    [[3,5000],[1,5000],[3,5000],[1,5000],[3,5000],[1,5000],[3,5000],[1,5000],[4,15000]],
+    [[3,short_interval],[1,short_interval],[3,short_interval],[1,short_interval],[3,short_interval],[1,short_interval],[3,short_interval],[1,short_interval],[4,15000]],
     [[2,60000]],
     [[1,60000]]
     ]
@@ -241,7 +248,12 @@ class Mission:
                             oled.text_center(f'set {s} = {i}', 0)
                             oled.show()
                     if key_pad_ok.value():
-                        results.append([i-1, 10000 if s != 'D' else 15000])
+                        if s == 'A':
+                            results.append([i-1, 2000])
+                        elif s == 'D':
+                            results.append([i-1, 10000])
+                        else:
+                            results.append([i-1, 6000])
                         flag = 1 #oled
         else:
             results = self.step_instruction_list[self.question_index]
