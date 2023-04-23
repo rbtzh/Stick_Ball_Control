@@ -4,12 +4,12 @@
 #
 # 全国大学生电子设计竞赛
 # 西安邮电大学校赛，2023年
-# 棍球模型（控制题，C题）
+# 一维板球模型（控制题，C题）
 #
-# 队长 黄耀科 电科2102班 03212042 通信与信息工程学院
-# 队员 赵彦博 通工2108班 03201274 通信与信息工程学院
-# 队员 李嘉明 物联网2102班 03217041 通信与信息工程学院
-# 指导教师 何在民 通信与信息工程学院
+# 队长 黄耀科 Huang Yaoke 电科2102班   03212042 通信与信息工程学院
+# 队员 赵彦博 Zhao Yanbo  通工2108班   03201274 通信与信息工程学院
+# 队员 李嘉明 Li Jiaming  物联网2102班 03217041 通信与信息工程学院
+# 指导教师 何在民 Dr. He Zaimin 通信与信息工程学院
 #
 # 北斗智能时空信息技术实验室
 #
@@ -22,7 +22,7 @@
 # - 对生命的热爱
 #
 # 祝世界和平
-# 最后编辑者 赵彦博
+# 编辑者 赵彦博 李嘉明 黄耀科
 #############################################
 
 # 1 Init Program
@@ -47,6 +47,10 @@ sensor.set_brightness(-3)   #降低亮度
 
 # The threshold of LAB to identify ball
 ball_lab = (0, 100, -97, 127, 35 , 127) #yellow
+ball_roi = (161,0,49,240)
+
+sidecar_ball_lab = (23, 56, 4, 127, -128, -2) #blue
+sidecar_ball_roi = (56,29,131,206-29)
 
 # Consts relate to PID control
 画面中点=(320/2,240/2)
@@ -63,6 +67,12 @@ ball_lab = (0, 100, -97, 127, 35 , 127) #yellow
 积分I系数_激进=0.4  #0.4
 微分D系数_激进=0.5  #0.3
 积分I最大值_激进=5   #5
+
+舵机范围_跟随=(-30 ,30)
+比例P系数_跟随=0.4  #0.4
+积分I系数_跟随=0.4  #0.4
+微分D系数_跟随=0.3  #0.3
+积分I最大值_跟随=5   #5
 
 
 # Objects related to hardware control, GPIO, Display, etc
@@ -81,19 +91,21 @@ oled = ssd1306_tools.SSD1306_I2C_MODIFIED(128,64,oled_i2c)
 
 # Steps instruction list, contains steps=
 STEP_INSTRUCTION_LIST = [
-    [[1,30000]],
-    [[2,30000]],
-    [[4,30000]],
-    [[1,5000],[2,30000]],
-    [[2,5000],[4,30000]],
+    [[1,10000]],
+    [[2,20000]],
+    [[4,20000]],
+    [[1,10000],[2,20000]],
+    [[2,10000],[4,20000]],
     [[1,1]],
     [[3,5000],[1,5000],[3,5000],[1,5000],[3,5000],[1,5000],[3,5000],[1,5000],[4,15000]],
-    [[2,90000]]
+    [[2,60000]],
+    [[1,60000]]
     ]
 
 SPECIAL_INDEX_NEED_INPUT = [5]
 SPECIAL_INDEX_NEED_AGGRESSIVE_PID = [7]
-SPECIAL_CHECK_LIST = [SPECIAL_INDEX_NEED_INPUT,SPECIAL_INDEX_NEED_AGGRESSIVE_PID]
+SPECIAL_INDEX_NEED_SIDECAR_BALL = [8]
+SPECIAL_CHECK_LIST = [SPECIAL_INDEX_NEED_INPUT,SPECIAL_INDEX_NEED_AGGRESSIVE_PID, SPECIAL_INDEX_NEED_SIDECAR_BALL]
 
 # void move_platform( float:degree )
 # move platform (the PVC Pipe) to given degree,
@@ -123,7 +135,7 @@ def get_target_pisition_list():
 # void display_data(string)
 # 0: print to terminal
 # 1: print to ssd1306
-def display_data(display_content, method = 1, mission_index = 0):
+def display_data(display_content, method = 1, mission_index = 0, timestamp = 0):
     #FIXTHIS display someting to SSD1306 OLED
     if method == 0:
         print(display_content)
@@ -131,6 +143,8 @@ def display_data(display_content, method = 1, mission_index = 0):
         oled.fill(0)
         if mission_index == 0:
             oled.text_center("now is running",0)
+            oled.text_center("running time:",20)
+            oled.text_center(f"{timestamp/1000} s",40)
             oled.show()
         else:
             oled.text_center(f"Please select ",0)
@@ -170,8 +184,9 @@ def input_data(input_prompt, method = 1):
                 pass
     else:
         pass
+    print(i-1)
     return i - 1
-  
+
 # class of a mission
 # a mission is an independent program, run given step list step by step
 class Mission:
@@ -180,6 +195,8 @@ class Mission:
         self.question_index = question_index
         self.step_instruction_list = step_instruction_list
         self.special_check_list = special_check_list
+
+        self.missionStartTimeStamp = 系统运行时间()
 
         #Pre-Modify-Check
         # change flag
@@ -196,6 +213,10 @@ class Mission:
             self.isNeedAggressivePID = True
         else:
             self.isNeedAggressivePID = False
+        if self.question_index in self.special_check_list[2]:
+            self.isNeedSidecarBall = True
+        else:
+            self.isNeedSidecarBall = False
 
     def get_steps_from_step_instruction_list(self):
         results = []
@@ -221,7 +242,7 @@ class Mission:
                             oled.show()
                     if key_pad_ok.value():
                         results.append([i-1, 10000 if s != 'D' else 15000])
-                        flag = 1 #
+                        flag = 1 #oled
         else:
             results = self.step_instruction_list[self.question_index]
         return results
@@ -236,6 +257,12 @@ class Mission:
             微分D系数 = 微分D系数_激进
             积分I最大值 = 积分I最大值_激进
             舵机范围 = 舵机范围_激进
+        elif self.isNeedSidecarBall:
+            比例P系数 = 比例P系数_跟随
+            积分I系数 = 积分I系数_跟随
+            微分D系数 = 微分D系数_跟随
+            积分I最大值 = 积分I最大值_跟随
+            舵机范围 = 舵机范围_跟随
         else:
             比例P系数 = 比例P系数_温和
             积分I系数 = 积分I系数_温和
@@ -254,24 +281,51 @@ class Mission:
 
         while(True):
             时刻 = 系统运行时间()
-            display_data("Time in one step: " + str(时刻 - time_step_start))
+            display_data("Time in one step: " +  str(时刻 - time_step_start),timestamp = 时刻 - self.missionStartTimeStamp)
+            print(str(时刻 - self.missionStartTimeStamp))
             if 时刻 > time_step_start + step_info[1]:
                 return "Timeout"
             else:
                 img = sensor.snapshot()
-                ball_blobs = img.find_blobs([ball_lab])
-                if ball_blobs:#如果找到结果
-                    ball_blob = max(ball_blobs, key = lambda b: b.pixels())#按结果的像素值，找最大值的数据。也就是找最大的色块。
-                    if ball_blob.w()>5 and ball_blob.h()>5:#过滤掉长宽小于10的结果 #FIXTHIS
-                        #img.draw_rectangle(ball_blob[0:4],color=(255,0,0))#按寻找色块结果的前四个值，绘制方形，框选识别结果。
-                        img.draw_line(0,ball_blob.cy(), 320, ball_blob.cy(),color=(255,0,0))#用结果的中心值坐标，绘制十字
-                        ball_position=ball_blob.cy()
+                if self.isNeedSidecarBall:
+                    print("Need to find sidecar ball")
+                    sidecar_ball_blobs = img.find_blobs([sidecar_ball_lab], roi=sidecar_ball_roi)
+                    if sidecar_ball_blobs:#如果找到结果
+                        sidecar_ball_blobs = max(sidecar_ball_blobs, key = lambda b: b.pixels())#按结果的像素值，找最大值的数据。也就是找最大的色块。
+                        if sidecar_ball_blobs.w()>5 and sidecar_ball_blobs.h()>5:#过滤掉长宽小于5的结果 #FIXTHIS
+                            img.draw_line(0,sidecar_ball_blobs.cy(), 320, sidecar_ball_blobs.cy(),color=(0,0,255))#用结果的中心值坐标，绘制直线
+                            target_position=sidecar_ball_blobs.cy()
+                        else:
+                            target_position=target_position_list[2]
+
+                    ball_blobs = img.find_blobs([ball_lab], roi=ball_roi)
+                    if ball_blobs:#如果找到结果
+                        ball_blob = max(ball_blobs, key = lambda b: b.pixels())#按结果的像素值，找最大值的数据。也就是找最大的色块。
+                        if ball_blob.w()>5 and ball_blob.h()>5:#过滤掉长宽小于10的结果 #FIXTHIS
+                            #img.draw_rectangle(ball_blob[0:4],color=(255,0,0))#按寻找色块结果的前四个值，绘制方形，框选识别结果。
+                            img.draw_line(0,ball_blob.cy(), 320, ball_blob.cy(),color=(255,0,0))#用结果的中心值坐标，绘制十字
+                            ball_position=ball_blob.cy()
+                        else:#没有找到小球
+                            积分I=0   #积分I清零
+                            ball_position=target_position #告知系统小球达到目标，使系统停转
                     else:#没有找到小球
                         积分I=0   #积分I清零
-                        ball_position=target_position #告知系统小球达到目标，使系统停转
-                else:#没有找到小球
-                    积分I=0   #积分I清零
-                    ball_position=target_position
+                        ball_position=target_position
+
+                else:
+                    ball_blobs = img.find_blobs([ball_lab], roi=ball_roi)
+                    if ball_blobs:#如果找到结果
+                        ball_blob = max(ball_blobs, key = lambda b: b.pixels())#按结果的像素值，找最大值的数据。也就是找最大的色块。
+                        if ball_blob.w()>5 and ball_blob.h()>5:#过滤掉长宽小于10的结果 #FIXTHIS
+                            #img.draw_rectangle(ball_blob[0:4],color=(255,0,0))#按寻找色块结果的前四个值，绘制方形，框选识别结果。
+                            img.draw_line(0,ball_blob.cy(), 320, ball_blob.cy(),color=(255,0,0))#用结果的中心值坐标，绘制十字
+                            ball_position=ball_blob.cy()
+                        else:#没有找到小球
+                            积分I=0   #积分I清零
+                            ball_position=target_position #告知系统小球达到目标，使系统停转
+                    else:#没有找到小球
+                        积分I=0   #积分I清零
+                        ball_position=target_position
 
                 运行时间=(系统运行时间()-计时)/1000
                 计时=系统运行时间()
